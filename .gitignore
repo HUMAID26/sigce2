@@ -1,0 +1,11 @@
+# Python
+*.pyc
+__pycache__/
+.venv/
+venv/
+
+# Environment
+.env
+
+# Local Database
+clinic.db

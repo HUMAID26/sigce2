@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIGCE CLINIC - Professional Doctor Appointment System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        /* General Styles */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        :root {
+            --primary: #2a7de1; --secondary: #1a5fb4; --accent: #e63946; --light: #f8f9fa;
+            --dark: #212529; --success: #28a745; --warning: #ffc107; --danger: #dc3545;
+            --gray: #6c757d; --light-gray: #e9ecef;
+        }
+        body { background-color: #f5f7fa; color: var(--dark); line-height: 1.6; min-height: 100vh; display: flex; flex-direction: column; }
+        .container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 15px; }
+        
+        /* Header & Navigation */
+        header { background-color: white; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); position: sticky; top: 0; z-index: 100; }
+        .header-content { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; }
+        .logo { display: flex; align-items: center; gap: 10px; font-size: 1.25rem; font-weight: 700; color: var(--primary); text-decoration: none; }
+        .logo i { font-size: 1.5rem; }
+        #mainNavDesktop ul { display: flex; list-style: none; gap: 20px; }
+        nav a { text-decoration: none; color: var(--dark); font-weight: 500; padding: 5px 10px; border-radius: 4px; transition: all 0.3s ease; }
+        nav a:hover, nav a.active { background-color: var(--primary); color: white; }
+        .header-right-controls { display: flex; align-items: center; gap: 15px; margin-left: auto; }
+        .auth-buttons { display: flex; gap: 10px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; transition: all 0.3s ease; text-decoration: none; display: inline-block; text-align: center; }
+        .btn-sm { padding: 5px 10px; font-size: 0.8rem; }
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-primary:hover { background-color: var(--secondary); }
+        .btn-outline { background-color: transparent; border: 1px solid var(--primary); color: var(--primary); }
+        .btn-outline:hover { background-color: var(--primary); color: white; }
+        .btn-danger { background-color: var(--danger); color: white; }
+        .btn-danger:hover { background-color: #c82333; }
+        
+        /* Hero Section */
+        .hero { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 60px 0; text-align: center; }
+        .hero h1 { font-size: 2.5rem; margin-bottom: 20px; }
+        .hero p { font-size: 1.1rem; max-width: 700px; margin: 0 auto 30px; }
+        
+        /* Sections & Content */
+        .page-section { padding: 60px 0; display: none; }
+        .page-section.active { display: block; }
+        .section-title { text-align: center; margin-bottom: 40px; }
+        .section-title h2 { font-size: 2rem; color: var(--primary); margin-bottom: 10px; }
+        .section-title p { color: var(--gray); max-width: 700px; margin: 0 auto; }
+        .doctors-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px; }
+        .doctor-card { background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: transform 0.3s ease; display: flex; flex-direction: column; }
+        .doctor-card:hover { transform: translateY(-5px); }
+        .doctor-img { height: 200px; background-color: var(--light-gray); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .doctor-img img { width: 100%; height: 100%; object-fit: cover; }
+        .doctor-img i { font-size: 4rem; color: var(--primary); }
+        .doctor-info { padding: 20px; display: flex; flex-direction: column; flex-grow: 1; }
+        .doctor-info h3 { margin-bottom: 5px; color: var(--dark); }
+        .doctor-info p { color: var(--gray); margin-bottom: 15px; }
+        .doctor-info .btn { margin-top: auto; }
+        .doctor-specialty { display: inline-block; background-color: var(--light-gray); color: var(--primary); padding: 4px 10px; border-radius: 20px; font-size: 0.9rem; margin-bottom: 15px; align-self: flex-start; }
+        
+        /* Forms & Dashboards */
+        .form-container { max-width: 500px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; }
+        .form-control { width: 100%; padding: 10px 15px; border: 1px solid var(--light-gray); border-radius: 4px; font-size: 1rem; }
+        .form-control:focus { outline: none; border-color: var(--primary); }
+        .file-upload { position: relative; overflow: hidden; display: inline-block; width: 100%; }
+        .file-upload-btn { border: 1px dashed #ccc; color: #666; background-color: #f9f9f9; padding: 10px 15px; border-radius: 4px; font-size: 14px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.3s ease; width: 100%; }
+        .file-upload-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .file-upload-input { position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+        .preview-image { max-width: 100%; max-height: 200px; margin-top: 10px; display: none; border-radius: 4px; }
+        .dashboard-header { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); margin-bottom: 30px; }
+        .dashboard-nav { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .dashboard-nav button { padding: 8px 16px; border: none; background-color: var(--light-gray); border-radius: 4px; cursor: pointer; transition: all 0.3s ease; }
+        .dashboard-nav button.active { background-color: var(--primary); color: white; }
+        .dashboard-content { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); }
+        .message-card, .appointment-card, .doctor-admin-card { border: 1px solid var(--light-gray); border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+        .appointment-header, .doctor-admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px; }
+        .appointment-status { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; text-transform: capitalize; }
+        .status-pending { background-color: #fff3cd; color: #856404; }
+        .status-confirmed { background-color: #d1ecf1; color: #0c5460; }
+        .status-completed { background-color: #d4edda; color: #155724; }
+        .status-cancelled { background-color: #f8d7da; color: #721c24; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .no-data { text-align: center; color: var(--gray); padding: 20px; }
+        
+        /* Footer */
+        footer { background-color: var(--dark); color: white; padding: 40px 0 20px; margin-top: auto; }
+        .footer-content { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; margin-bottom: 30px; }
+        .footer-column h3 { margin-bottom: 20px; font-size: 1.2rem; }
+        .footer-column ul { list-style: none; }
+        .footer-column ul li { margin-bottom: 10px; }
+        .footer-column a { color: #adb5bd; text-decoration: none; transition: color 0.3s ease; }
+        .footer-column a:hover { color: white; }
+        .copyright { text-align: center; padding-top: 20px; border-top: 1px solid #495057; color: #adb5bd; font-size: 0.9rem; }
+        
+        /* Modals & Toasts */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center; padding: 15px; }
+        .modal.active { display: flex; }
+        .modal-content { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-title { font-size: 1.5rem; font-weight: 600; }
+        .close-modal { background: none; border: none; font-size: 1.8rem; cursor: pointer; color: var(--gray); line-height: 1; }
+        .mobile-menu-btn { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--dark); }
+        #mainNav { display: none; }
+        
+        #toastContainer {
+            position: fixed;
+            bottom: 100px; /* Position it above the chatbot button */
+            right: 20px;
+            z-index: 1001;
+            display: flex;
+            flex-direction: column-reverse; /* Stack messages upwards */
+            gap: 10px;
+        }
+
+        .toast {
+            padding: 15px 20px;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateX(100%);
+            opacity: 0;
+            transition: all 0.5s ease-out;
+            max-width: 300px;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        
+        .toast.success { background-color: var(--success); }
+        .toast.error { background-color: var(--danger); }
+        .toast.warning { background-color: var(--warning); color: var(--dark); }
+        .loading { opacity: 0.6; pointer-events: none; }
+        
+        /* Enhanced Styles & Chatbot */
+        .doctor-about-card { padding: 20px; text-align: center; }
+        .doctor-about-card h3 { color: var(--primary); margin-bottom: 10px; }
+        .doctor-about-card p { color: var(--dark); margin-bottom: 10px; }
+        .schedule-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .schedule-day { background-color: var(--light-gray); padding: 10px; border-radius: 4px; }
+        .service-card { border: 1px solid var(--light-gray); padding: 20px; border-radius: 8px; margin-bottom: 20px; background-color: white; }
+        .service-card h3 { color: var(--primary); margin-bottom: 5px; }
+        .service-card .price { font-size: 1.2em; font-weight: bold; color: var(--success); margin-bottom: 10px; }
+        
+        /* Chatbot */
+        #chatbot-container { position: fixed; bottom: 20px; right: 20px; z-index: 1002; }
+        #chatbot-toggle-button { width: 60px; height: 60px; background-color: var(--primary); color: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); transition: transform 0.2s ease, background-color 0.2s; }
+        #chatbot-toggle-button:hover { transform: scale(1.1); background-color: var(--secondary); }
+        #chatbot-window { width: 360px; height: 520px; background-color: white; border-radius: 12px; box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; overflow: hidden; position: absolute; bottom: 80px; right: 0; transition: opacity 0.3s ease, transform 0.3s ease; }
+        #chatbot-window.hidden { opacity: 0; transform: scale(0.95) translateY(15px); pointer-events: none; }
+        #chatbot-header { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 15px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        #chatbot-header span { display: flex; align-items: center; gap: 10px; }
+        #chatbot-close-button { background: none; border: none; color: white; font-size: 24px; cursor: pointer; opacity: 0.8; transition: opacity 0.2s; }
+        #chatbot-close-button:hover { opacity: 1; }
+        #chatbot-body { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background-color: #f9f9f9; }
+        .chat-message { padding: 10px 15px; border-radius: 18px; max-width: 85%; line-height: 1.4; word-wrap: break-word; }
+        .chat-message.user { background-color: var(--light-gray); color: var(--dark); align-self: flex-end; border-bottom-right-radius: 4px; }
+        .chat-message.bot { background-color: var(--primary); color: white; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .chat-message.error { background-color: #f8d7da; color: #721c24; align-self: flex-start; border-bottom-left-radius: 4px; }
+        #chatbot-footer { display: flex; padding: 10px; border-top: 1px solid var(--light-gray); background-color: white; flex-shrink: 0; }
+        #chatbot-input { flex-grow: 1; border: 1px solid #ccc; border-radius: 20px; padding: 8px 15px; outline: none; font-size: 1rem; transition: border-color 0.2s; }
+        #chatbot-input:focus { border-color: var(--primary); }
+        #chatbot-send-button { background: var(--primary); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; margin-left: 10px; cursor: pointer; font-size: 16px; flex-shrink: 0; transition: background-color 0.2s; }
+        #chatbot-send-button:hover { background-color: var(--secondary); }
+        #chatbot-send-button:disabled { background-color: #ccc; cursor: not-allowed; }
+        .time-slot.booked { background-color: #ccc; cursor: not-allowed; pointer-events: none; }
+        
+        /* Media Queries */
+        @media (max-width: 768px) {
+            .mobile-menu-btn { display: block; }
+            #mainNavDesktop { display: none; }
+            #mainNav { display: none; position: absolute; top: 68px; left: 0; width: 100%; background-color: white; box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1); z-index: 99; }
+            #mainNav.active { display: block; }
+            #mainNav ul { flex-direction: column; padding: 15px; gap: 5px; }
+            #mainNav a { display: block; padding: 10px 15px; }
+            .header-right-controls { margin-left: auto; }
+            .auth-buttons .btn { padding: 6px 10px; font-size: 0.9rem; }
+            .hero h1 { font-size: 2rem; }
+            .hero p { font-size: 1rem; }
+            .dashboard-nav { flex-direction: column; align-items: stretch; }
+            .doctors-grid { grid-template-columns: 1fr; }
+            .footer-content { grid-template-columns: 1fr; text-align: center; }
+            .appointment-header { flex-direction: column; align-items: flex-start; }
+            .modal-content { padding: 20px; }
+            .btn { padding: 10px 16px; font-size: 1rem; }
+            #chatbot-window { width: 95vw; height: 70vh; bottom: 80px; right: 2.5vw; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="#" class="logo nav-link" data-section="home">
+                    <i class="fas fa-stethoscope"></i>
+                    <span>SIGCE CLINIC</span>
+                </a>
+                <nav id="mainNavDesktop">
+                    <ul>
+                        <li><a href="#" class="active nav-link" data-section="home">Home</a></li>
+                        <li><a href="#" class="nav-link" data-section="doctors">Doctors</a></li>
+                        <li><a href="#" class="nav-link" data-section="services">Services</a></li>
+                        <li><a href="#" class="nav-link" data-section="about">About</a></li>
+                        <li><a href="#" class="nav-link" data-section="contact">Contact</a></li>
+                    </ul>
+                </nav>
+                <div class="header-right-controls">
+                    <div class="auth-buttons">
+                        <button class="btn btn-outline" id="loginBtn">Login</button>
+                        <button class="btn btn-primary" id="signupBtn">Sign Up</button>
+                        <a href="#" class="btn btn-primary nav-link" data-section="dashboardSection" id="dashboardBtn" style="display: none;">Dashboard</a>
+                        <button class="btn btn-outline" id="logoutBtn" style="display: none;">Logout</button>
+                    </div>
+                    <button class="mobile-menu-btn">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+            <nav id="mainNav">
+                <ul></ul>
+            </nav>
+        </div>
+    </header>
+
+    <main id="mainContent">
+        <section class="page-section active" id="home">
+            <div class="hero">
+                <div class="container">
+                    <h1>Book Your Doctor Appointment Online</h1>
+                    <p>Find the best doctors near you and book appointments instantly. Save time and manage your health with our easy-to-use platform.</p>
+                    <button class="btn btn-primary" id="heroBookBtn" style="padding: 12px 24px; font-size: 1.1rem;">Book an Appointment</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="page-section" id="doctors">
+            <div class="container">
+                <div class="section-title">
+                    <h2>Our Expert Doctors</h2>
+                    <p>Choose from our team of experienced and qualified healthcare professionals</p>
+                </div>
+                <div class="doctors-grid" id="doctorsGridHome"></div>
+            </div>
+        </section>
+
+        <section class="page-section" id="services" style="background-color: var(--light-gray);">
+            <div class="container">
+                <div class="section-title">
+                    <h2>Our Services</h2>
+                    <p>Comprehensive healthcare services for all your medical needs</p>
+                </div>
+                <div id="servicesList"></div>
+            </div>
+        </section>
+
+        <section class="page-section" id="about">
+            <div class="container">
+                <div class="section-title">
+                    <h2>About SIGCE CLINIC</h2>
+                    <p>Your trusted partner in healthcare management</p>
+                </div>
+                <div class="form-container" style="text-align: center;">
+                    <p>SIGCE CLINIC is a comprehensive platform designed to simplify the process of booking doctor appointments. Our mission is to make healthcare accessible and convenient for everyone.</p>
+                    <p style="margin-top: 1rem;">With our user-friendly interface, patients can easily find doctors, check availability, and book appointments at their convenience. Our system also helps healthcare providers manage their schedules efficiently.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="page-section" id="contact" style="background-color: var(--light-gray);">
+            <div class="container">
+                <div class="section-title">
+                    <h2>Contact Us</h2>
+                    <p>Get in touch with us for any inquiries or support</p>
+                </div>
+                <div class="form-container">
+                    <form id="contactForm">
+                        <div class="form-group"><label for="contactName">Full Name</label><input type="text" id="contactName" class="form-control" required></div>
+                        <div class="form-group"><label for="contactEmail">Email</label><input type="email" id="contactEmail" class="form-control" required disabled></div>
+                        <div class="form-group"><label for="contactMessage">Message</label><textarea id="contactMessage" class="form-control" rows="5" required></textarea></div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;">Send Message</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <section class="page-section" id="booking" style="background-color: var(--light-gray);">
+            <div class="container">
+                <div class="section-title">
+                    <h2>Book an Appointment</h2>
+                    <p>Fill in your details to schedule your appointment</p>
+                </div>
+                <div class="form-container">
+                    <form id="appointmentForm">
+                        <div class="form-group"><label for="patientName">Full Name</label><input type="text" id="patientName" class="form-control" required></div>
+                        <div class="form-group"><label for="patientEmail">Email</label><input type="email" id="patientEmail" class="form-control" required disabled></div>
+                        <div class="form-group"><label for="patientPhone">Phone Number</label><input type="tel" id="patientPhone" class="form-control" required></div>
+                        <div class="form-group"><label for="doctorSelect">Select Doctor</label><select id="doctorSelect" class="form-control" required></select></div>
+                        <div class="form-group"><label for="serviceSelect">Select Service</label><select id="serviceSelect" class="form-control" required></select></div>
+                        <div class="form-group"><label for="appointmentDate">Appointment Date</label><input type="date" id="appointmentDate" class="form-control" required></div>
+                        <div class="form-group"><label for="appointmentTime">Appointment Time</label><select id="appointmentTime" class="form-control" required></select></div>
+                        <div class="form-group"><label for="symptoms">Symptoms (Optional)</label><textarea id="symptoms" class="form-control" rows="3"></textarea></div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;">Book Appointment</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <section class="page-section" id="dashboardSection">
+            <div class="container">
+                <div id="userDashboard">
+                    <div class="dashboard-header">
+                        <h2>Patient Dashboard</h2>
+                        <p>Welcome, <span id="userName">User</span>!</p>
+                        <div class="dashboard-nav">
+                            <button class="active" data-tab="appointmentsUser">My Appointments</button>
+                            <button data-tab="recordsUser">Medical Records</button>
+                            <button data-tab="profileUser">Profile</button>
+                            <button data-tab="messagesUser">Messages</button>
+                        </div>
+                    </div>
+                    <div class="dashboard-content">
+                        <div id="appointmentsUserTab" class="tab-content active"><h3>My Appointments</h3><div id="userAppointmentsList"></div></div>
+                        <div id="recordsUserTab" class="tab-content"><h3>Medical Records</h3><div id="userRecordsList"></div></div>
+                        <div id="profileUserTab" class="tab-content"><h3>Profile Settings</h3><form id="profileForm"><div class="form-group"><label for="profileName">Full Name</label><input type="text" id="profileName" class="form-control" required></div><div class="form-group"><label for="profileEmail">Email</label><input type="email" id="profileEmail" class="form-control" required disabled></div><div class="form-group"><label for="profilePhone">Phone Number</label><input type="tel" id="profilePhone" class="form-control" required></div><button type="submit" class="btn btn-primary">Update Profile</button></form></div>
+                        <div id="messagesUserTab" class="tab-content"><h3>My Messages</h3><div id="userMessagesList"></div></div>
+                    </div>
+                </div>
+                <div id="adminDashboard" style="display: none;">
+                    <div class="dashboard-header">
+                        <h2>Admin Dashboard</h2>
+                        <p>Manage the clinic operations</p>
+                        <div class="dashboard-nav">
+                            <button class="active" data-tab="allAppointments">Appointments</button>
+                            <button data-tab="manageDoctors">Doctors</button>
+                            <button data-tab="manageServices">Services</button>
+                            <button data-tab="manageUsers">Users</button>
+                            <button data-tab="messages">Messages</button>
+                            <button data-tab="analytics">Analytics</button>
+                            <button data-tab="manageRecords">Upload Records</button>
+                        </div>
+                    </div>
+                    <div class="dashboard-content">
+                        <div id="allAppointmentsTab" class="tab-content active"><h3>All Appointments</h3><div id="adminAppointmentsList"></div></div>
+                        <div id="manageDoctorsTab" class="tab-content"><h3>Manage Doctors</h3><button class="btn btn-primary" id="addDoctorBtn" style="margin-bottom: 20px;">Add New Doctor</button><div id="adminDoctorsList"></div></div>
+                        <div id="manageServicesTab" class="tab-content"><h3>Manage Services</h3><button class="btn btn-primary" id="addServiceBtn" style="margin-bottom: 20px;">Add New Service</button><div id="adminServicesList"></div></div>
+                        <div id="manageUsersTab" class="tab-content"><h3>Manage Users</h3><div id="adminUsersList"></div></div>
+                        <div id="messagesTab" class="tab-content"><h3>Contact Messages</h3><div id="adminMessagesList"></div></div>
+                        <div id="analyticsTab" class="tab-content"><h3>Clinic Analytics</h3><div id="analyticsContent"></div></div>
+                        <div id="manageRecordsTab" class="tab-content"><h3>Upload Medical Records</h3><div class="form-container"><form id="adminRecordForm"><div class="form-group"><label for="recordPatientSelect">Select Patient</label><select id="recordPatientSelect" class="form-control" required></select></div><div class="form-group"><label for="recordDoctorSelect">Select Doctor</label><select id="recordDoctorSelect" class="form-control" required></select></div><div class="form-group"><label for="recordType">Record Type</label><select id="recordType" class="form-control" required><option value="Prescription">Prescription</option><option value="Lab Result">Lab Result</option><option value="Other">Other</option></select></div><div class="form-group"><label for="recordFile">Record File (PDF, JPG, PNG)</label><input type="file" id="recordFile" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required></div><button type="submit" class="btn btn-primary" style="width: 100%;">Upload Record</button></form></div></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-column"><h3>SIGCE CLINIC</h3><p>Your trusted partner for healthcare appointments. Book with ease and manage your health.</p></div>
+                <div class="footer-column"><h3>Quick Links</h3><ul><li><a href="#" class="nav-link" data-section="home">Home</a></li><li><a href="#" class="nav-link" data-section="doctors">Doctors</a></li><li><a href="#" class="nav-link" data-section="services">Services</a></li></ul></div>
+                <div class="footer-column"><h3>Contact Us</h3><ul><li><i class="fas fa-map-marker-alt"></i> SIGCE CLINIC , GHANSOLI</li><li><i class="fas fa-phone"></i> 9881134XXX</li><li><i class="fas fa-envelope"></i> info@sigceclinic.com</li></ul></div>
+            </div>
+            <div class="copyright"><p>&copy; 2025 SIGCE CLINIC. All rights reserved.</p></div>
+        </div>
+    </footer>
+
+    <div id="loginModal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">Login</h2><button class="close-modal">&times;</button></div><form id="loginForm" novalidate><div class="form-group"><label for="loginEmail">Email</label><input type="email" id="loginEmail" class="form-control" required></div><div class="form-group"><label for="loginPassword">Password</label><input type="password" id="loginPassword" class="form-control" required></div><button type="submit" class="btn btn-primary" style="width: 100%;">Login</button></form></div></div>
+    <div id="signupModal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">Sign Up</h2><button class="close-modal">&times;</button></div><form id="signupForm" novalidate><div class="form-group"><label for="signupName">Full Name</label><input type="text" id="signupName" class="form-control" required></div><div class="form-group"><label for="signupEmail">Email</label><input type="email" id="signupEmail" class="form-control" required></div><div class="form-group"><label for="signupPhone">Phone Number</label><input type="tel" id="signupPhone" class="form-control" required></div><div class="form-group"><label for="signupPassword">Password</label><input type="password" id="signupPassword" class="form-control" required minlength="6"></div><div class="form-group"><label for="signupConfirmPassword">Confirm Password</label><input type="password" id="signupConfirmPassword" class="form-control" required></div><button type="submit" class="btn btn-primary" style="width: 100%;">Sign Up</button></form></div></div>
+    <div id="doctorModal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title" id="doctorModalTitle">Add Doctor</h2><button class="close-modal">&times;</button></div><form id="doctorForm" novalidate><input type="hidden" id="doctorId"><div class="form-group"><label for="doctorName">Doctor Name</label><input type="text" id="doctorName" class="form-control" required></div><div class="form-group"><label for="doctorSpecialty">Specialty</label><input type="text" id="doctorSpecialty" class="form-control" required></div><div class="form-group"><label for="doctorExperience">Experience (in years)</label><input type="number" id="doctorExperience" class="form-control" required min="0"></div><div class="form-group"><label for="doctorQualifications">Qualifications</label><input type="text" id="doctorQualifications" class="form-control"></div><div class="form-group"><label for="doctorAbout">About Me</label><textarea id="doctorAbout" class="form-control" rows="3"></textarea></div><div class="form-group"><label for="doctorPhoto">Doctor Photo</label><div class="file-upload"><div class="file-upload-btn"><i class="fas fa-cloud-upload-alt"></i><span id="fileUploadText">Choose a photo or drag & drop</span></div><input type="file" id="doctorPhoto" class="file-upload-input" accept="image/*"></div><img id="photoPreview" class="preview-image" src="" alt="Photo Preview"></div><button type="submit" class="btn btn-primary" style="width: 100%;">Save Doctor</button></form></div></div>
+    <div id="serviceModal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title" id="serviceModalTitle">Add Service</h2><button class="close-modal">&times;</button></div><form id="serviceForm" novalidate><input type="hidden" id="serviceId"><div class="form-group"><label for="serviceName">Service Name</label><input type="text" id="serviceName" class="form-control" required></div><div class="form-group"><label for="serviceDescription">Description</label><textarea id="serviceDescription" class="form-control" rows="3"></textarea></div><div class="form-group"><label for="servicePrice">Price</label><input type="number" id="servicePrice" class="form-control" step="0.01" required min="0"></div><button type="submit" class="btn btn-primary" style="width: 100%;">Save Service</button></form></div></div>
+    <div id="doctorScheduleModal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title" id="scheduleModalTitle">Doctor Schedule</h2><button class="close-modal">&times;</button></div><div id="scheduleFormContent"></div><div class="form-group"><label>Available Days</label><div id="scheduleDays"></div></div><button class="btn btn-primary" id="saveScheduleBtn" style="width: 100%;">Save Schedule</button></div></div>
+    <div id="doctorProfileModal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title" id="profileModalTitle"></h2><button class="close-modal">&times;</button></div><div id="doctorProfileContent"></div></div></div>
+    <div id="replyModal" class="modal"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">Reply to User</h2><button class="close-modal">&times;</button></div><form id="replyForm"><input type="hidden" id="replyUserId"><div class="form-group"><label>Replying to:</label><p id="replyingToInfo"></p></div><div class="form-group"><label for="replyMessage">Your Message</label><textarea id="replyMessage" class="form-control" rows="5" required></textarea></div><button type="submit" class="btn btn-primary" style="width: 100%;">Send Reply</button></form></div></div>
+    <div id="confirmModal" class="modal"><div class="modal-content" style="text-align: center;"><h2 class="modal-title" id="confirmTitle">Confirm Action</h2><p id="confirmMessage" style="margin: 20px 0;"></p><div style="display: flex; justify-content: center; gap: 10px;"><button class="btn btn-outline" id="confirmCancelBtn">Cancel</button><button class="btn btn-danger" id="confirmOkBtn">OK</button></div></div></div>
+    <div id="notificationModal" class="modal"><div class="modal-content" style="text-align: center;"><h2 class="modal-title" id="notificationTitle">Notification</h2><p id="notificationMessage" style="margin: 20px 0;"></p><button class="btn btn-primary close-modal" style="width: 100px; margin: 0 auto;">OK</button></div></div>
+
+    <div id="toastContainer"></div>
+
+    <div id="chatbot-container">
+        <div id="chatbot-toggle-button">
+            <i class="fas fa-comment-dots"></i>
+        </div>
+        <div id="chatbot-window" class="hidden">
+            <div id="chatbot-header">
+                <span><i class="fas fa-stethoscope"></i> SIGCE Clinic Assistant</span>
+                <button id="chatbot-close-button">&times;</button>
+            </div>
+            <div id="chatbot-body">
+                <div class="chat-message bot">Welcome to SIGCE Clinic. I am your virtual assistant. How may I help you today?</div>
+            </div>
+            <div id="chatbot-footer">
+                <input type="text" id="chatbot-input" placeholder="Ask a question...">
+                <button id="chatbot-send-button">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const state = { 
+            currentUser: null, 
+            doctors: [], 
+            services: [], 
+            appointments: [], 
+            messages: [], 
+            medicalRecords: [], 
+            users: [], 
+            socket: null 
+        };
+
+        const API = {
+            baseURL: window.location.origin,
+            async request(endpoint, options = {}) {
+                try {
+                    const response = await fetch(`${this.baseURL}${endpoint}`, {
+                        headers: { 'Content-Type': 'application/json', ...options.headers },
+                        credentials: 'include', ...options
+                    });
+                    if (response.status === 204) return;
+                    const text = await response.text();
+                    if (!response.ok) {
+                        let error;
+                        try { error = JSON.parse(text); } catch (e) { throw new Error(text || `HTTP ${response.status}`); }
+                        throw new Error(error.error || `HTTP ${response.status}`);
+                    }
+                    return text ? JSON.parse(text) : {};
+                } catch (error) { 
+                    console.error('API Error:', error); 
+                    // This error is now handled by the specific calling function, 
+                    // preventing a duplicate toast.
+                    throw error; 
+                }
+            },
+            signup(data) { return this.request('/api/signup', { method: 'POST', body: JSON.stringify(data) }); },
+            login(data) { return this.request('/api/login', { method: 'POST', body: JSON.stringify(data) }); },
+            logout(isSilent = false) { return this.request(isSilent ? '/api/logout?silent=true' : '/api/logout', { method: 'POST' }); },
+            getSession() { return this.request('/api/session'); },
+            getDoctors() { return this.request('/api/doctors'); },
+            getDoctor(id) { return this.request(`/api/doctors/${id}`); },
+            createDoctor(data) { return this.request('/api/doctors', { method: 'POST', body: JSON.stringify(data) }); },
+            updateDoctor(id, data) { return this.request(`/api/doctors/${id}`, { method: 'PUT', body: JSON.stringify(data) }); },
+            deleteDoctor(id) { return this.request(`/api/doctors/${id}`, { method: 'DELETE' }); },
+            getServices() { return this.request('/api/services'); },
+            createService(data) { return this.request('/api/services', { method: 'POST', body: JSON.stringify(data) }); },
+            updateService(id, data) { return this.request(`/api/services/${id}`, { method: 'PUT', body: JSON.stringify(data) }); },
+            deleteService(id) { return this.request(`/api/services/${id}`, { method: 'DELETE' }); },
+            getAppointments() { return this.request('/api/appointments'); },
+            getBookedSlots(doctorId, date) { return this.request(`/api/appointments/booked_slots?doctorId=${doctorId}&date=${date}`); },
+            createAppointment(data) { return this.request('/api/appointments', { method: 'POST', body: JSON.stringify(data) }); },
+            updateAppointmentStatus(id, status) { return this.request(`/api/appointments/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }); },
+            updateProfile(data) { return this.request('/api/profile', { method: 'PUT', body: JSON.stringify(data) }); },
+            getMessages() { return this.request('/api/messages'); },
+            sendMessage(data) { return this.request('/api/messages', { method: 'POST', body: JSON.stringify(data) }); },
+            deleteMessage(id) { return this.request(`/api/messages/${id}`, { method: 'DELETE' }); },
+            getMedicalRecords() { return this.request('/api/medical_records'); },
+            uploadMedicalRecord(data) { return this.request('/api/medical_records', { method: 'POST', body: JSON.stringify(data) }); },
+            getUsers() { return this.request('/api/users'); },
+            deleteUser(id) { return this.request(`/api/users/${id}`, { method: 'DELETE' }); },
+            getAnalytics() { return this.request('/api/analytics'); },
+            getDoctorSchedule(doctorId) { return this.request(`/api/doctors/${doctorId}/schedule`); },
+            saveDoctorSchedule(doctorId, schedule) { return this.request(`/api/doctors/${doctorId}/schedule`, { method: 'POST', body: JSON.stringify({ schedule }) }); },
+            chat(message) { return this.request('/api/chatbot', { method: 'POST', body: JSON.stringify({ message }) }); }
+        };
+
+        const Utils = {
+            showToast(message, type = 'info') {
+                const toastContainer = document.getElementById('toastContainer');
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                toastContainer.appendChild(toast);
+                setTimeout(() => toast.classList.add('show'), 10);
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 500);
+                }, 4000);
+            },
+            formatDate(d) { return new Date(d).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }); },
+            showModal(id) { document.getElementById(id).classList.add('active'); },
+            hideModal(id) { document.getElementById(id).classList.remove('active'); },
+            setLoading(el, isLoading) { el.classList.toggle('loading', isLoading); el.disabled = isLoading; },
+            fileToBase64(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = error => reject(error);
+                });
+            },
+            showConfirmModal(title, message) {
+                return new Promise((resolve) => {
+                    document.getElementById('confirmTitle').textContent = title;
+                    document.getElementById('confirmMessage').textContent = message;
+                    this.showModal('confirmModal');
+                    const okBtn = document.getElementById('confirmOkBtn');
+                    const cancelBtn = document.getElementById('confirmCancelBtn');
+                    const cleanup = () => { okBtn.removeEventListener('click', okHandler); cancelBtn.removeEventListener('click', cancelHandler); this.hideModal('confirmModal'); };
+                    const okHandler = () => { cleanup(); resolve(true); };
+                    const cancelHandler = () => { cleanup(); resolve(false); };
+                    okBtn.addEventListener('click', okHandler, { once: true });
+                    cancelBtn.addEventListener('click', cancelHandler, { once: true });
+                });
+            },
+            generateTimeSlots() {
+                return ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "17:00"];
+            }
+        };
+
+        const UI = {
+            init() {
+                this.initNavigation();
+                this.initAuthUI();
+                this.initBookingForm();
+                this.initAdminDashboard();
+                this.initContactForm();
+                this.initChatbot();
+                this.initSocket();
+            },
+            
+            initNavigation() {
+                const desktopNav = document.getElementById('mainNavDesktop').querySelector('ul');
+                const mobileNav = document.getElementById('mainNav').querySelector('ul');
+                mobileNav.innerHTML = desktopNav.innerHTML;
+                document.querySelector('.mobile-menu-btn').addEventListener('click', () => document.getElementById('mainNav').classList.toggle('active'));
+                
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const sectionId = link.getAttribute('data-section');
+                        this.showSection(sectionId);
+                        document.getElementById('mainNav').classList.remove('active');
+                        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                        document.querySelectorAll(`.nav-link[data-section="${sectionId}"]`).forEach(l => l.classList.add('active'));
+                    });
+                });
+                
+                heroBookBtn.addEventListener('click', () => {
+                    if (state.currentUser && state.currentUser.isAdmin) {
+                        Utils.showToast('Admins cannot book appointments.', 'warning');
+                        return;
+                    } else if (state.currentUser) {
+                        this.showSection('booking');
+                    } else { 
+                        this.showLoginModal();
+                    }
+                });
+            },
+
+            showSection(sectionId) {
+                document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+                const targetSection = document.getElementById(sectionId);
+                if (targetSection) { 
+                    targetSection.classList.add('active'); 
+                    window.scrollTo(0, 0); 
+                }
+                this.loadSectionData(sectionId);
+            },
+
+            loadSectionData(id) {
+                if (id === 'doctors') this.loadDoctors();
+                else if (id === 'services') this.loadServices();
+                else if (id === 'dashboardSection') this.loadUserDashboard();
+                else if (id === 'booking') this.loadBookingForm();
+            },
+
+            initAuthUI() {
+                loginBtn.addEventListener('click', () => this.showLoginModal());
+                signupBtn.addEventListener('click', () => this.showSignupModal());
+                logoutBtn.addEventListener('click', () => this.logout());
+                document.querySelectorAll('.modal .close-modal, #confirmCancelBtn').forEach(btn => btn.addEventListener('click', e => Utils.hideModal(e.target.closest('.modal').id)));
+                document.querySelectorAll('.modal').forEach(modal => modal.addEventListener('click', e => { if (e.target === modal) Utils.hideModal(modal.id); }));
+                loginForm.addEventListener('submit', e => this.handleLogin(e));
+                signupForm.addEventListener('submit', e => this.handleSignup(e));
+            },
+
+            showLoginModal() { Utils.showModal('loginModal'); loginForm.reset(); },
+            showSignupModal() { Utils.showModal('signupModal'); signupForm.reset(); },
+            
+            async handleLogin(e) {
+                e.preventDefault(); 
+                const form = e.target;
+                const btn = form.querySelector('button[type="submit"]');
+                if (btn.disabled) return;
+                
+                try {
+                    Utils.setLoading(btn, true);
+                    const user = await API.login({ email: loginEmail.value, password: loginPassword.value });
+                    await this.handleSuccessfulAuth(user);
+                } catch (error) { 
+                    Utils.showToast(error.message, 'error'); 
+                } finally {
+                    Utils.setLoading(btn, false); 
+                }
+            },
+            
+            async handleSignup(e) {
+                e.preventDefault();
+                const form = e.target;
+                const btn = form.querySelector('button[type="submit"]');
+                if (btn.disabled) return;
+
+                if (signupPassword.value !== signupConfirmPassword.value) {
+                    Utils.showToast('Passwords do not match', 'error');
+                    return;
+                }
+                
+                try { 
+                    Utils.setLoading(btn, true); 
+                    const user = await API.signup({ name: signupName.value, email: signupEmail.value, phone: signupPhone.value, password: signupPassword.value }); 
+                    await this.handleSuccessfulAuth(user);
+                } catch (error) { 
+                    Utils.showToast(error.message, 'error'); 
+                } finally {
+                    Utils.setLoading(btn, false); 
+                }
+            },
+            
+            async handleSuccessfulAuth(user) {
+                state.currentUser = user; 
+                this.updateUIForAuthState(); 
+                Utils.hideModal('loginModal'); 
+                Utils.hideModal('signupModal');
+                this.initSocket(); 
+                Utils.showToast(`Welcome, ${user.name}!`, 'success');
+                this.showSection('dashboardSection');
+            },
+            
+            async logout(isSilent = false) {
+                try { await API.logout(isSilent); if (!isSilent) Utils.showToast('Logged out successfully', 'success'); } catch (error) { if (!isSilent) Utils.showToast(error.message, 'error'); } 
+                finally { 
+                    state.currentUser = null; 
+                    this.updateUIForAuthState(); 
+                    if (state.socket) { 
+                        state.socket.disconnect(); 
+                        state.socket = null; 
+                    } 
+                    this.showSection('home'); 
+                }
+            },
+            
+            updateUIForAuthState() {
+                const isLoggedIn = !!state.currentUser;
+                const isAdmin = state.currentUser?.isAdmin;
+                loginBtn.style.display = isLoggedIn ? 'none' : 'block';
+                signupBtn.style.display = isLoggedIn ? 'none' : 'block';
+                dashboardBtn.style.display = isLoggedIn ? 'inline-block' : 'none';
+                logoutBtn.style.display = isLoggedIn ? 'block' : 'none';
+                userDashboard.style.display = isLoggedIn && !isAdmin ? 'block' : 'none';
+                adminDashboard.style.display = isLoggedIn && isAdmin ? 'block' : 'none';
+                
+                document.querySelectorAll('.nav-link[data-section="contact"]').forEach(el => {
+                    el.parentElement.style.display = isAdmin ? 'none' : 'list-item';
+                });
+                if (state.currentUser) { userName.textContent = state.currentUser.name; }
+                this.renderDoctors();
+            },
+            
+            async loadDoctors() {
+                state.doctors = await API.getDoctors();
+                this.renderDoctors();
+                if (state.currentUser?.isAdmin) {
+                    this.renderAdminDoctorsList();
+                }
+            },
+
+            renderDoctors() {
+                const container = document.getElementById('doctorsGridHome');
+                if (!container) return;
+                if (state.doctors.length === 0) { container.innerHTML = '<p class="no-data">No doctors available.</p>'; return; }
+                container.innerHTML = state.doctors.map(doc => `
+                    <div class="doctor-card" onclick="UI.showDoctorProfileModal(${doc.id})">
+                        <div class="doctor-img">${doc.photo ? `<img src="${doc.photo}" alt="${doc.name}">` : `<i class="fas fa-user-md"></i>`}</div>
+                        <div class="doctor-info">
+                            <h3>Dr. ${doc.name}</h3>
+                            <span class="doctor-specialty">${doc.specialty}</span>
+                            <p>${doc.experience} years of experience</p>
+                            ${state.currentUser && !state.currentUser.isAdmin ? `<button class="btn btn-primary" onclick="event.stopPropagation(); UI.bookAppointmentWithDoctor(${doc.id})">Book Appointment</button>` : 
+                            !state.currentUser ? `<button class="btn btn-primary" onclick="event.stopPropagation(); UI.showLoginModal()">Login to Book</button>` : ''}
+                        </div>
+                    </div>`).join('');
+            },
+
+            async showDoctorProfileModal(id) {
+                const doctor = state.doctors.find(d => d.id === id);
+                if (!doctor) { Utils.showToast("Doctor not found.", 'error'); return; }
+
+                document.getElementById('profileModalTitle').textContent = `Dr. ${doctor.name}`;
+                document.getElementById('doctorProfileContent').innerHTML = `
+                    <div style="text-align: center;">
+                        <img src="${doctor.photo || 'https://via.placeholder.com/150'}" alt="${doctor.name}" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover;">
+                    </div>
+                    <h4 style="margin-top: 20px;">Specialty: ${doctor.specialty}</h4>
+                    <p><strong>Experience:</strong> ${doctor.experience} years</p>
+                    <p><strong>Qualifications:</strong> ${doctor.qualifications}</p>
+                    <p style="margin-top: 15px;"><strong>About:</strong> ${doctor.about}</p>
+                `;
+                Utils.showModal('doctorProfileModal');
+            },
+            
+            async loadServices() {
+                state.services = await API.getServices();
+                this.renderServices();
+                if (state.currentUser?.isAdmin) {
+                    this.renderAdminServicesList();
+                }
+            },
+
+            renderServices() {
+                const container = document.getElementById('servicesList');
+                if (!container) return;
+                if (state.services.length === 0) {
+                    container.innerHTML = '<p class="no-data">No services available.</p>';
+                    return;
+                }
+                container.innerHTML = state.services.map(service => `
+                    <div class="service-card">
+                        <h3>${service.name}</h3>
+                        <p class="price">₹${service.price.toFixed(2)}</p>
+                        <p>${service.description}</p>
+                    </div>
+                `).join('');
+            },
+            
+            bookAppointmentWithDoctor(id) {
+                if (state.currentUser?.isAdmin) { Utils.showToast('Admins cannot book appointments.', 'warning'); return; }
+                this.showSection('booking');
+                doctorSelect.value = id;
+            },
+            
+            async loadBookingForm() {
+                if (!state.currentUser) { Utils.showToast('You must be logged in to book an appointment.', 'warning'); return this.showLoginModal(); }
+                if (state.currentUser.isAdmin) {
+                    Utils.showToast('Admins cannot book appointments.', 'warning');
+                    return this.showSection('dashboardSection');
+                }
+                
+                await this.loadDoctors();
+                await this.loadServices();
+                
+                this.renderDoctorDropdown();
+                this.renderServiceDropdown();
+                this.prefillUserData();
+                this.renderTimeDropdown();
+                
+                appointmentDate.addEventListener('change', () => this.updateAvailableTimes());
+                doctorSelect.addEventListener('change', () => this.updateAvailableTimes());
+            },
+
+            async updateAvailableTimes() {
+                const doctorId = doctorSelect.value;
+                const date = appointmentDate.value;
+                const timeSelect = document.getElementById('appointmentTime');
+                
+                timeSelect.innerHTML = '<option value="">Select Time</option>';
+                if (!doctorId || !date) return;
+                
+                const bookedSlots = await API.getBookedSlots(doctorId, date);
+                const allSlots = Utils.generateTimeSlots();
+                
+                allSlots.forEach(time => {
+                    const option = document.createElement('option');
+                    option.value = time;
+                    option.textContent = time;
+                    if (bookedSlots.includes(time)) {
+                        option.disabled = true;
+                        option.classList.add('booked');
+                    }
+                    timeSelect.appendChild(option);
+                });
+            },
+            
+            renderDoctorDropdown() { doctorSelect.innerHTML = '<option value="">Select a doctor</option>' + state.doctors.map(d => `<option value="${d.id}">Dr. ${d.name} - ${d.specialty}</option>`).join(''); },
+            renderServiceDropdown() { serviceSelect.innerHTML = '<option value="">Select a service</option>' + state.services.map(s => `<option value="${s.id}">${s.name} (₹${s.price.toFixed(2)})</option>`).join(''); },
+            renderTimeDropdown() { appointmentTime.innerHTML = '<option value="">Select Time</option>'; },
+            
+            prefillUserData() { 
+                if (state.currentUser) { 
+                    patientName.value = state.currentUser.name; 
+                    patientEmail.value = state.currentUser.email; 
+                    patientPhone.value = state.currentUser.phone || ''; 
+                } 
+            },
+            
+            initBookingForm() { 
+                appointmentForm.addEventListener('submit', e => this.handleBookAppointment(e)); 
+                appointmentDate.min = new Date().toISOString().split('T')[0]; 
+            },
+            
+            async handleBookAppointment(e) {
+                e.preventDefault(); 
+                const form = e.target, btn = form.querySelector('button[type="submit"]');
+                if (btn.disabled) return;
+                
+                try { 
+                    Utils.setLoading(btn, true); 
+                    await API.createAppointment({ 
+                        doctorId: parseInt(doctorSelect.value), 
+                        serviceId: parseInt(serviceSelect.value), 
+                        date: appointmentDate.value, 
+                        time: appointmentTime.value, 
+                        symptoms: symptoms.value 
+                    });
+                    Utils.showToast('Appointment booked successfully!', 'success');
+                    form.reset(); 
+                    this.prefillUserData(); 
+                    this.showSection('dashboardSection');
+                } catch (error) { 
+                    Utils.showToast(error.message, 'error');
+                } finally { 
+                    Utils.setLoading(btn, false); 
+                }
+            },
+            
+            async loadUserDashboard() {
+                if (!state.currentUser) return;
+                try {
+                    state.appointments = await API.getAppointments();
+                    if (state.currentUser.isAdmin) {
+                        await this.loadDoctors();
+                        await this.loadServices();
+                        state.messages = await API.getMessages();
+                        state.users = await API.getUsers();
+                        this.renderAdminMessages();
+                        this.renderAdminUsersList();
+                        this.loadAdminRecordsForm();
+                    } else {
+                        state.messages = await API.getMessages();
+                        state.medicalRecords = await API.getMedicalRecords();
+                        this.renderUserMessages();
+                        this.renderUserRecords();
+                    }
+                    this.renderUserAppointments();
+                    this.renderAdminDoctorsList();
+                    this.renderAdminServicesList();
+                    this.initDashboardTabs();
+                } catch (error) { 
+                    Utils.showToast(error.message, 'error');
+                }
+            },
+            
+            initDashboardTabs() {
+                document.querySelectorAll('.dashboard-nav button').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const tabName = btn.getAttribute('data-tab');
+                        btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active')); 
+                        btn.classList.add('active');
+                        const dashboardContent = btn.closest('.dashboard-header').nextElementSibling;
+                        dashboardContent.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                        dashboardContent.querySelector(`#${tabName}Tab`).classList.add('active');
+                        
+                        if (tabName === 'profileUser') this.loadProfileForm();
+                        else if (tabName === 'analytics') this.loadAnalytics();
+                        else if (tabName === 'manageDoctors') { this.loadDoctors(); this.renderAdminDoctorsList(); }
+                        else if (tabName === 'manageServices') { this.loadServices(); this.renderAdminServicesList(); }
+                        else if (['allAppointments', 'messages', 'manageUsers', 'recordsUser', 'appointmentsUser'].includes(tabName)) this.loadUserDashboard();
+                    });
+                });
+                profileForm.addEventListener('submit', e => this.handleProfileUpdate(e));
+            },
+            
+            renderUserAppointments() {
+                const isAdmin = state.currentUser?.isAdmin; 
+                const container = document.getElementById(isAdmin ? 'adminAppointmentsList' : 'userAppointmentsList');
+                if (!container) return; 
+                const userApts = state.appointments.filter(apt => isAdmin || apt.userId === state.currentUser.id);
+                if (userApts.length === 0) { container.innerHTML = '<p class="no-data">No appointments found.</p>'; return; }
+                container.innerHTML = userApts.map(apt => `
+                    <div class="appointment-card">
+                        <div class="appointment-header">
+                            <div><h4>Dr. ${apt.doctorName}</h4><p>${apt.serviceName}</p>${isAdmin ? `<p>Patient: ${apt.patientName}</p>` : ''}</div>
+                            <span class="appointment-status status-${apt.status}">${apt.status}</span>
+                        </div>
+                        <p><strong>Date:</strong> ${Utils.formatDate(apt.date)} at ${apt.time}</p>
+                        ${apt.symptoms ? `<p><strong>Symptoms:</strong> ${apt.symptoms}</p>` : ''}
+                        <p><strong>Price:</strong> ₹${apt.price.toFixed(2)}</p>
+                        ${apt.status === 'pending' && !isAdmin ? `<button class="btn btn-danger btn-sm" onclick="UI.updateAppointmentStatus(${apt.id}, 'cancelled')">Cancel</button>` : ''}
+                        ${isAdmin && !['completed', 'cancelled'].includes(apt.status) ? `<div style="margin-top: 10px; display:flex; gap: 5px; flex-wrap: wrap;">
+                            ${apt.status === 'pending' ? `<button class="btn btn-primary btn-sm" onclick="UI.updateAppointmentStatus(${apt.id}, 'confirmed')">Confirm</button>` : ''}
+                            <button class="btn btn-sm" onclick="UI.updateAppointmentStatus(${apt.id}, 'completed')">Complete</button>
+                            <button class="btn btn-danger btn-sm" onclick="UI.updateAppointmentStatus(${apt.id}, 'cancelled')">Cancel</button>
+                        </div>` : ''}
+                    </div>`).join('');
+            },
+
+            async updateAppointmentStatus(id, status) {
+                if (status === 'cancelled') { const confirmed = await Utils.showConfirmModal('Cancel Appointment', 'Are you sure you want to cancel this appointment?'); if (!confirmed) return; }
+                try { await API.updateAppointmentStatus(id, status); Utils.showToast(`Appointment ${status}`, 'success'); await this.loadUserDashboard();
+                } catch (error) { Utils.showToast(error.message, 'error'); }
+            },
+            
+            renderUserRecords() {
+                const container = document.getElementById('userRecordsList');
+                if (!container) return;
+                if (state.medicalRecords.length === 0) {
+                    container.innerHTML = '<p class="no-data">No medical records found.</p>';
+                    return;
+                }
+                container.innerHTML = state.medicalRecords.map(record => `
+                    <div class="appointment-card">
+                        <div class="appointment-header">
+                            <div><h4>${record.recordType}</h4><p>Dr. ${record.doctorName}</p></div>
+                        </div>
+                        <p><strong>Date:</strong> ${Utils.formatDate(record.uploadedAt)}</p>
+                        <a href="/download/${record.filePath}" target="_blank" class="btn btn-primary btn-sm">View/Download</a>
+                    </div>
+                `).join('');
+            },
+            
+            loadProfileForm() { 
+                if (state.currentUser) { 
+                    profileName.value = state.currentUser.name; 
+                    profileEmail.value = state.currentUser.email; 
+                    profilePhone.value = state.currentUser.phone || ''; 
+                } 
+            },
+            
+            async handleProfileUpdate(e) {
+                e.preventDefault(); 
+                const form = e.target;
+                const btn = form.querySelector('button[type="submit"]');
+                if (btn.disabled) return;
+
+                try { 
+                    Utils.setLoading(btn, true); 
+                    const updatedUser = await API.updateProfile({ name: profileName.value, phone: profilePhone.value });
+                    state.currentUser = updatedUser; 
+                    this.updateUIForAuthState(); 
+                    Utils.showToast('Profile updated successfully', 'success');
+                } catch (error) { 
+                    Utils.showToast(error.message, 'error');
+                } finally { 
+                    Utils.setLoading(btn, false); 
+                }
+            },
+            
+            initAdminDashboard() {
+                addDoctorBtn.addEventListener('click', () => this.showDoctorModal());
+                doctorForm.addEventListener('submit', e => this.handleSaveDoctor(e));
+                doctorPhoto.addEventListener('change', e => this.handlePhotoUpload(e));
+                addServiceBtn.addEventListener('click', () => this.showServiceModal());
+                serviceForm.addEventListener('submit', e => this.handleSaveService(e));
+                adminRecordForm.addEventListener('submit', e => this.handleUploadRecord(e));
+                replyForm.addEventListener('submit', e => this.handleSendReply(e));
+            },
+            
+            renderAdminDoctorsList() {
+                if (!state.currentUser?.isAdmin) return;
+                if (state.doctors.length === 0) { adminDoctorsList.innerHTML = '<p class="no-data">No doctors found. Add one!</p>'; return; }
+                adminDoctorsList.innerHTML = state.doctors.map(doc => `
+                    <div class="doctor-admin-card">
+                        <div class="doctor-admin-header">
+                            <h4>Dr. ${doc.name} - ${doc.specialty}</h4>
+                            <div style="display:flex; gap: 5px;">
+                                <button class="btn btn-outline btn-sm" onclick="UI.editDoctor(${doc.id})">Edit</button>
+                                <button class="btn btn-danger btn-sm" onclick="UI.handleDeleteDoctor(${doc.id})">Delete</button>
+                            </div>
+                        </div>
+                        <p><strong>Experience:</strong> ${doc.experience} years</p>
+                    </div>`).join('');
+            },
+
+            renderAdminServicesList() {
+                if (!state.currentUser?.isAdmin) return;
+                if (state.services.length === 0) { adminServicesList.innerHTML = '<p class="no-data">No services found. Add one!</p>'; return; }
+                adminServicesList.innerHTML = state.services.map(service => `
+                    <div class="doctor-admin-card">
+                        <div class="doctor-admin-header">
+                            <h4>${service.name}</h4>
+                            <div style="display:flex; gap: 5px;">
+                                <button class="btn btn-outline btn-sm" onclick="UI.editService(${service.id})">Edit</button>
+                                <button class="btn btn-danger btn-sm" onclick="UI.handleDeleteService(${service.id})">Delete</button>
+                            </div>
+                        </div>
+                        <p><strong>Price:</strong> ₹${service.price.toFixed(2)}</p>
+                    </div>`).join('');
+            },
+
+            renderAdminUsersList() {
+                const container = document.getElementById('adminUsersList');
+                if (!container) return;
+                if (state.users.length === 0) { container.innerHTML = '<p class="no-data">No users found.</p>'; return; }
+                container.innerHTML = state.users.map(user => `
+                    <div class="appointment-card">
+                        <div class="appointment-header">
+                            <div><h4>${user.name}</h4><p>${user.email}</p></div>
+                            <button class="btn btn-danger btn-sm" onclick="UI.handleDeleteUser(${user.id})">Delete</button>
+                        </div>
+                        <p><strong>Phone:</strong> ${user.phone || 'N/A'}</p>
+                    </div>`).join('');
+            },
+            
+            renderAdminMessages() {
+                const container = document.getElementById('adminMessagesList'); if (!container) return;
+                if (state.messages.length === 0) { container.innerHTML = '<p class="no-data">No new messages.</p>'; return; }
+                container.innerHTML = state.messages.map(convo => `
+                    <div class="message-card">
+                        <h4>Conversation with ${convo.with_user_name}</h4>
+                        ${convo.messages.map(msg => `
+                            <p><strong>${msg.senderId === state.currentUser.id ? 'You' : msg.senderName}:</strong> ${msg.content}</p>
+                        `).join('')}
+                        <button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="UI.showReplyModal('${convo.with_user_name}', ${convo.with_user_id})">Reply</button>
+                    </div>`).join('');
+            },
+
+            renderUserMessages() {
+                const container = document.getElementById('userMessagesList'); if (!container) return;
+                if (state.messages.length === 0) { container.innerHTML = '<p class="no-data">No messages yet. Use the Contact page to send a message to the admin.</p>'; return; }
+                container.innerHTML = state.messages.map(msg => `
+                    <div class="message-card">
+                        <p><strong>${msg.senderId === state.currentUser.id ? 'You' : msg.senderName}:</strong> ${msg.content}</p>
+                    </div>`).join('');
+            },
+
+            showReplyModal(name, userId) {
+                replyForm.reset();
+                document.getElementById('replyingToInfo').textContent = `${name}`;
+                document.getElementById('replyUserId').value = userId;
+                Utils.showModal('replyModal');
+            },
+
+            async handleSendReply(e) {
+                e.preventDefault(); 
+                const form = e.target;
+                const btn = form.querySelector('button[type="submit"]');
+                if (btn.disabled) return;
+                
+                const replyData = { recipient_id: parseInt(document.getElementById('replyUserId').value), content: document.getElementById('replyMessage').value };
+                try {
+                    Utils.setLoading(btn, true);
+                    await API.sendMessage(replyData);
+                    Utils.showToast('Reply sent successfully', 'success');
+                    Utils.hideModal('replyModal');
+                    this.loadUserDashboard();
+                } catch (err) { 
+                    Utils.showToast(err.message, 'error'); 
+                } finally { 
+                    Utils.setLoading(btn, false); 
+                }
+            },
+
+            async handleDeleteMessage(id) {
+                const confirmed = await Utils.showConfirmModal('Delete Message', 'Are you sure you want to delete this message?');
+                if (!confirmed) return;
+                await API.deleteMessage(id);
+                Utils.showToast('Message deleted', 'success');
+                await this.loadUserDashboard();
+            },
+
+            editDoctor(id) { const doctor = state.doctors.find(d => d.id === id); if (doctor) this.showDoctorModal(doctor); },
+
+            async handleDeleteDoctor(id) {
+                const confirmed = await Utils.showConfirmModal('Delete Doctor', 'Are you sure? This will also remove all their appointments and medical records.'); 
+                if (!confirmed) return;
+                await API.deleteDoctor(id); 
+                Utils.showToast('Doctor deleted', 'success'); 
+                await this.loadDoctors();
+            },
+            
+            showDoctorModal(doctor = null) {
+                doctorForm.reset(); 
+                photoPreview.style.display = 'none'; 
+                photoPreview.src = ''; 
+                fileUploadText.textContent = 'Choose a photo';
+                if (doctor) {
+                    doctorModalTitle.textContent = 'Edit Doctor'; 
+                    doctorId.value = doctor.id; 
+                    doctorName.value = doctor.name;
+                    doctorSpecialty.value = doctor.specialty; 
+                    doctorExperience.value = doctor.experience; 
+                    doctorQualifications.value = doctor.qualifications;
+                    doctorAbout.value = doctor.about;
+                    if (doctor.photo) { photoPreview.src = doctor.photo; photoPreview.style.display = 'block'; }
+                } else { 
+                    doctorModalTitle.textContent = 'Add Doctor'; 
+                    doctorId.value = ''; 
+                }
+                Utils.showModal('doctorModal');
+            },
+            
+            async handlePhotoUpload(e) {
+                const file = e.target.files[0]; if (!file) return;
+                try { const base64 = await Utils.fileToBase64(file); photoPreview.src = base64; photoPreview.style.display = 'block'; fileUploadText.textContent = file.name;
+                } catch (error) { Utils.showToast('Failed to process image', 'error'); }
+            },
+            
+            async handleSaveDoctor(e) {
+                e.preventDefault(); 
+                const form = e.target;
+                const btn = form.querySelector('button[type="submit"]');
+                if (btn.disabled) return;
+                
+                try {
+                    Utils.setLoading(btn, true);
+                    const doctorData = { name: doctorName.value, specialty: doctorSpecialty.value, experience: parseInt(doctorExperience.value), photo: photoPreview.src, qualifications: doctorQualifications.value, about: doctorAbout.value };
+                    if (doctorId.value) { await API.updateDoctor(doctorId.value, doctorData); Utils.showToast(`Doctor updated`, 'success'); } else { await API.createDoctor(doctorData); Utils.showToast(`Doctor added`, 'success'); }
+                    Utils.hideModal('doctorModal');
+                } catch (error) { 
+                    Utils.showToast(error.message, 'error'); 
+                } finally { 
+                    Utils.setLoading(btn, false); 
+                }
+            },
+
+            editService(id) { const service = state.services.find(s => s.id === id); if (service) this.showServiceModal(service); },
+
+            showServiceModal(service = null) {
+                serviceForm.reset();
+                if (service) {
+                    serviceModalTitle.textContent = 'Edit Service';
+                    serviceId.value = service.id;
+                    serviceName.value = service.name;
+                    serviceDescription.value = service.description;
+                    servicePrice.value = service.price;
+                } else {
+                    serviceModalTitle.textContent = 'Add Service';
+                    serviceId.value = '';
+                }
+                Utils.showModal('serviceModal');
+            },
+
+            async handleSaveService(e) {
+                e.preventDefault();
+                const btn = e.target.querySelector('button[type="submit"]');
+                if (btn.disabled) return;
+                
+                try {
+                    Utils.setLoading(btn, true);
+                    const serviceData = { name: serviceName.value, description: serviceDescription.value, price: parseFloat(servicePrice.value) };
+                    if (serviceId.value) { await API.updateService(serviceId.value, serviceData); Utils.showToast(`Service updated`, 'success'); }
+                    else { await API.createService(serviceData); Utils.showToast(`Service added`, 'success'); }
+                    Utils.hideModal('serviceModal');
+                } catch(error) { 
+                    Utils.showToast(error.message, 'error'); 
+                } finally { 
+                    Utils.setLoading(btn, false); 
+                }
+            },
+
+            async handleDeleteService(id) {
+                const confirmed = await Utils.showConfirmModal('Delete Service', 'Are you sure you want to delete this service?');
+                if (!confirmed) return;
+                await API.deleteService(id);
+                Utils.showToast('Service deleted', 'success');
+                await this.loadServices();
+            },
+
+            async handleDeleteUser(id) {
+                const confirmed = await Utils.showConfirmModal('Delete User', 'Are you sure you want to delete this user? All their data will be removed.');
+                if (!confirmed) return;
+                await API.deleteUser(id);
+                Utils.showToast('User deleted', 'success');
+                state.users = state.users.filter(u => u.id !== id);
+                this.renderAdminUsersList();
+            },
+
+            async loadAdminRecordsForm() {
+                const patients = state.users.filter(u => !u.isAdmin);
+                const doctors = state.doctors;
+                
+                const patientSelect = document.getElementById('recordPatientSelect');
+                patientSelect.innerHTML = '<option value="">Select Patient</option>' + patients.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+                
+                const doctorSelect = document.getElementById('recordDoctorSelect');
+                doctorSelect.innerHTML = '<option value="">Select Doctor</option>' + doctors.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+            },
+
+            async handleUploadRecord(e) {
+                e.preventDefault();
+                const form = e.target;
+                const btn = form.querySelector('button[type="submit"]');
+                if (btn.disabled) return;
+                
+                const fileInput = document.getElementById('recordFile');
+                const file = fileInput.files[0];
+                
+                if (!file) { Utils.showToast('Please select a file to upload.', 'error'); return; }
+
+                try {
+                    Utils.setLoading(btn, true);
+                    const fileData = await Utils.fileToBase64(file);
+                    const recordData = {
+                        patientId: parseInt(document.getElementById('recordPatientSelect').value),
+                        doctorId: parseInt(document.getElementById('recordDoctorSelect').value),
+                        recordType: document.getElementById('recordType').value,
+                        fileName: file.name,
+                        fileData: fileData
+                    };
+                    
+                    await API.uploadMedicalRecord(recordData);
+                    Utils.showToast('Medical record uploaded successfully!', 'success');
+                    form.reset();
+                } catch (error) {
+                     Utils.showToast(error.message, 'error'); 
+                } finally {
+                    Utils.setLoading(btn, false);
+                }
+            },
+            
+            async loadAnalytics() {
+                try {
+                    const data = await API.getAnalytics();
+                    const container = document.getElementById('analyticsContent');
+                    container.innerHTML = `
+                        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                            <div style="background-color: var(--light-gray); padding: 20px; border-radius: 8px; flex: 1;">
+                                <h4>Total Appointments</h4>
+                                <h3>${data.totalAppointments}</h3>
+                            </div>
+                            <div style="background-color: var(--light-gray); padding: 20px; border-radius: 8px; flex: 1;">
+                                <h4>Completed Appointments</h4>
+                                <h3>${data.completedAppointments}</h3>
+                            </div>
+                        </div>
+                        <h4 style="margin-top: 30px;">Appointments by Specialty</h4>
+                        <ul style="list-style: none; padding: 0;">
+                            ${data.appointmentsBySpecialty.map(item => `<li>${item.specialty}: ${item.count}</li>`).join('')}
+                        </ul>
+                    `;
+                } catch(error) {
+                    Utils.showToast("Failed to load analytics data.", 'error');
+                }
+            },
+            
+            async initContactForm() {
+                contactForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    if (!state.currentUser) { Utils.showToast('You must be logged in to send a message.', 'warning'); return this.showLoginModal(); }
+                    const btn = e.target.querySelector('button[type="submit"]');
+                    if (btn.disabled) return;
+                    
+                    try {
+                        Utils.setLoading(btn, true);
+                        await API.sendMessage({ content: contactMessage.value });
+                        Utils.showToast('Thank you! An admin will be notified.', 'success'); 
+                        e.target.reset(); this.prefillUserData();
+                    } catch (err) { Utils.showToast(err.message, 'error'); } 
+                    finally { Utils.setLoading(btn, false); }
+                });
+            },
+
+            initSocket() {
+                if (state.socket) { state.socket.disconnect(); }
+                state.socket = io();
+
+                state.socket.on('connect', () => {
+                    if (state.currentUser) {
+                        state.socket.emit('join_room', { room: state.currentUser.isAdmin ? 'admin_room' : `user_${state.currentUser.id}` });
+                    }
+                });
+
+                state.socket.on('doctor_update', async (data) => {
+                    Utils.showToast(`Doctor list updated`, 'info');
+                    await this.loadDoctors();
+                    if (state.currentUser?.isAdmin) {
+                        this.renderAdminDoctorsList();
+                    }
+                });
+
+                state.socket.on('service_update', async (data) => {
+                    Utils.showToast(`Services list updated`, 'info');
+                    await this.loadServices();
+                    if (state.currentUser?.isAdmin) {
+                        this.renderAdminServicesList();
+                    }
+                });
+
+                state.socket.on('new_appointment', apt => {
+                    if (state.currentUser?.isAdmin) {
+                        Utils.showToast(`New appointment from ${apt.patientName}`, 'info');
+                        this.loadUserDashboard();
+                    }
+                });
+
+                state.socket.on('appointment_update', data => {
+                    if (data.status === 'confirmed') {
+                        Utils.showToast(`Appointment status updated to CONFIRMED.`, 'success');
+                    } else if (data.status === 'cancelled') {
+                         Utils.showToast(`Appointment has been CANCELLED.`, 'danger');
+                    }
+                    if (document.getElementById('dashboardSection').classList.contains('active')) {
+                        this.loadUserDashboard();
+                    }
+                });
+
+                state.socket.on('force_logout', data => {
+                    this.logout(true);
+                    Utils.showToast(data.msg, 'warning');
+                });
+
+                state.socket.on('new_message', data => {
+                    Utils.showToast(`New message from ${data.senderName}`, 'info');
+                    if(document.getElementById('dashboardSection').classList.contains('active')) {
+                        this.loadUserDashboard();
+                    }
+                });
+                state.socket.on('user_deleted', data => {
+                    Utils.showToast(`A user account was deleted.`, 'info');
+                    if(document.getElementById('dashboardSection').classList.contains('active')) {
+                        this.loadUserDashboard();
+                    }
+                });
+                state.socket.on('medical_record_update', data => {
+                    if(data.patientId === state.currentUser.id) {
+                        Utils.showToast(`A new medical record has been uploaded for you.`, 'info');
+                        this.loadUserDashboard();
+                    }
+                });
+            },
+
+            initChatbot() {
+                const chatbotToggleButton = document.getElementById('chatbot-toggle-button');
+                const chatbotWindow = document.getElementById('chatbot-window');
+                const chatbotCloseButton = document.getElementById('chatbot-close-button');
+                const chatbotInput = document.getElementById('chatbot-input');
+                const chatbotSendButton = document.getElementById('chatbot-send-button');
+                const chatbotBody = document.getElementById('chatbot-body');
+
+                const toggleChatbot = () => {
+                    chatbotWindow.classList.toggle('hidden');
+                    if (!chatbotWindow.classList.contains('hidden')) {
+                        chatbotInput.focus();
+                    }
+                };
+
+                chatbotToggleButton.addEventListener('click', toggleChatbot);
+                chatbotCloseButton.addEventListener('click', toggleChatbot);
+
+                const addMessage = (message, sender) => {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = `chat-message ${sender}`;
+                    messageDiv.textContent = message;
+                    chatbotBody.appendChild(messageDiv);
+                    chatbotBody.scrollTop = chatbotBody.scrollHeight;
+                };
+
+                const sendMessage = async () => {
+                    const userMessage = chatbotInput.value.trim();
+                    if (!userMessage) return;
+                    
+                    addMessage(userMessage, 'user');
+                    chatbotInput.value = '';
+                    chatbotInput.disabled = true;
+                    chatbotSendButton.disabled = true;
+
+                    try {
+                        const data = await API.chat(userMessage);
+                        addMessage(data.response, 'bot');
+                    } catch (error) {
+                        addMessage(`Sorry, an error occurred: ${error.message}`, 'error');
+                    } finally {
+                        chatbotInput.disabled = false;
+                        chatbotSendButton.disabled = false;
+                        chatbotInput.focus();
+                    }
+                };
+
+                chatbotSendButton.addEventListener('click', sendMessage);
+                chatbotInput.addEventListener('keypress', (event) => {
+                    if (event.key === 'Enter') {
+                        sendMessage();
+                    }
+                });
+            }
+        };
+
+        const init = async () => {
+            UI.init();
+            try {
+                const user = await API.getSession();
+                if (user && user.id) {
+                    state.currentUser = user;
+                    UI.updateUIForAuthState();
+                    UI.initSocket();
+                }
+            } catch (error) {
+                console.log('No active session');
+            }
+            UI.loadDoctors();
+            UI.loadServices();
+            UI.showSection('home');
+        };
+
+        init();
+        window.UI = UI;
+    });
+    </script>
+</body>
+</html>
